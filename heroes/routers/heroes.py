@@ -1,15 +1,17 @@
 from fastapi import APIRouter, HTTPException, Query
 from sqlmodel import select
 
-from ..dependencies import SessionDep
+# Importamos la dependencia del usuario actual junto con la de sesión
+from ..dependencies import CurrentUserDep, SessionDep
 from ..models import Hero, HeroCreate, HeroPublic, HeroUpdate
 
 router = APIRouter(prefix="/heroes", tags=["heroes"])
 
 @router.post("/", response_model=HeroPublic)
-async def create_hero(
+def create_hero(
     hero: HeroCreate,
-    session: SessionDep
+    session: SessionDep,
+    usuario_actual: CurrentUserDep  # 🔒 Ruta protegida
 ):
     db_hero = Hero.model_validate(hero)
     session.add(db_hero)
@@ -18,17 +20,19 @@ async def create_hero(
     return db_hero
 
 @router.get("/", response_model=list[HeroPublic])
-async def read_heroes(
+def read_heroes(
     session: SessionDep,
+    usuario_actual: CurrentUserDep,  # 🔒 Ruta protegida
     offset: int = 0,
     limit: int = Query(default=100, le=100)
 ):
     return session.exec(select(Hero).offset(offset).limit(limit)).all()
 
 @router.get("/{hero_id}", response_model=HeroPublic)
-async def read_hero(
+def read_hero(
     hero_id: int,
-    session: SessionDep
+    session: SessionDep,
+    usuario_actual: CurrentUserDep  # 🔒 Ruta protegida
 ):
     hero = session.get(Hero, hero_id)
     if not hero:
@@ -37,13 +41,15 @@ async def read_hero(
 
 
 @router.patch("/{hero_id}", response_model=HeroPublic)
-async def update_hero(
+def update_hero(
     hero_id: int,
     hero: HeroUpdate,
-    session: SessionDep
+    session: SessionDep,
+    usuario_actual: CurrentUserDep  # 🔒 Ruta protegida
 ):
     db_hero = session.get(Hero, hero_id)
-    if not hero:
+    # Mini corrección al código original: validar db_hero en vez de hero
+    if not db_hero: 
         raise HTTPException(status_code=404, detail="Hero not found")
     hero_data = hero.model_dump(exclude_unset=True)
     db_hero.sqlmodel_update(hero_data)
@@ -53,16 +59,16 @@ async def update_hero(
     return db_hero
 
 @router.delete("/{hero_id}")
-async def delete_hero(
+def delete_hero(
     hero_id: int,
-    session: SessionDep
+    session: SessionDep,
+    usuario_actual: CurrentUserDep  # 🔒 Ruta protegida
 ):
     hero = session.get(Hero, hero_id)
     if not hero:
         raise HTTPException(status_code=404, detail="Hero not found")
     session.delete(hero)
     session.commit()
-    return{
+    return {
         "ok": True
     }
-

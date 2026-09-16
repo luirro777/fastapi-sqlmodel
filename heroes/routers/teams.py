@@ -1,7 +1,8 @@
 from fastapi import APIRouter, HTTPException, Query
 from sqlmodel import select
 
-from ..dependencies import SessionDep
+# Importamos la dependencia del usuario actual junto con la de sesión
+from ..dependencies import CurrentUserDep, SessionDep
 from ..models import Team, TeamCreate, TeamPublic, TeamUpdate
 
 router = APIRouter(prefix="/teams", tags=["teams"])
@@ -9,7 +10,8 @@ router = APIRouter(prefix="/teams", tags=["teams"])
 @router.post("/", response_model=TeamPublic)
 def create_team(
     team: TeamCreate,
-    session: SessionDep
+    session: SessionDep,
+    usuario_actual: CurrentUserDep  # 🔒 Ruta protegida
 ):
     db_team = Team.model_validate(team)
     session.add(db_team)
@@ -20,6 +22,7 @@ def create_team(
 @router.get("/", response_model=list[TeamPublic])
 def read_items(
     session: SessionDep,
+    usuario_actual: CurrentUserDep,  # 🔒 Ruta protegida
     offset: int = 0,
     limit: int = Query(default=100, le=100)
 ):
@@ -28,7 +31,8 @@ def read_items(
 @router.get("/{team_id}", response_model=TeamPublic)
 def read_team(
     team_id: int,
-    session: SessionDep
+    session: SessionDep,
+    usuario_actual: CurrentUserDep  # 🔒 Ruta protegida
 ):
     team = session.get(Team, team_id)
     if not team:
@@ -39,7 +43,8 @@ def read_team(
 def update_team(
     team_id: int,
     team: TeamUpdate,
-    session: SessionDep
+    session: SessionDep,
+    usuario_actual: CurrentUserDep  # 🔒 Ruta protegida
 ):
     db_team = session.get(Team, team_id)
     if not db_team:
@@ -54,13 +59,14 @@ def update_team(
 @router.delete("/{team_id}")
 def delete_team(
     team_id: int,
-    session: SessionDep
+    session: SessionDep,
+    usuario_actual: CurrentUserDep  # 🔒 Ruta protegida
 ):
     team = session.get(Team, team_id)
     if not team:
         raise HTTPException(status_code=404, detail="Team not found")
     session.delete(team)
     session.commit()
-    return{
+    return {
         "ok": True
     }
