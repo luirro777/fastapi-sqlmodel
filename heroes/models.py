@@ -45,20 +45,22 @@ class HeroUpdate(SQLModel):
     team_id: int | None = None
 
 #################### USUARIOS ###########################
-# Base común para compartir campos
 class UserBase(SQLModel):
-    email: EmailStr = Field(unique=True, index=True)
-    nombre: str
+    username: str = Field(index=True, unique=True)
+    email: str | None = None
+    full_name: str | None = None
+    disabled: bool = False
 
-# Tabla real en la Base de Datos
 class User(UserBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    hashed_password: str  # <-- ¡Nunca texto plano!
+    hashed_password: str          # nunca "password"
 
-# Esquema para recibir los datos de registro desde el Frontend
 class UserCreate(UserBase):
-    password: str
+    password: str                 # entra en texto plano, no se persiste
 
-# Esquema para responderle al Frontend (Sin mostrar la contraseña)
 class UserPublic(UserBase):
-    id: int
+    id: int                       # sin hashed_password: no se filtra
+
+class Token(SQLModel):
+    access_token: str
+    token_type: str = "bearer"
